@@ -1,0 +1,97 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "sdk_version": {
+      "const": "1",
+      "default": "1",
+      "title": "Sdk Version",
+      "type": "string"
+    },
+    "public_only": {
+      "const": true,
+      "default": true,
+      "title": "Public Only",
+      "type": "boolean"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "platform": {
+      "pattern": "^[a-z][a-z0-9_-]{1,39}$",
+      "title": "Platform",
+      "type": "string"
+    },
+    "version": {
+      "default": "0.1.0",
+      "title": "Version",
+      "type": "string"
+    },
+    "author": {
+      "default": "SocialIntel contributors",
+      "title": "Author",
+      "type": "string"
+    },
+    "domains": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Domains",
+      "type": "array"
+    },
+    "status": {
+      "title": "Status",
+      "type": "string"
+    },
+    "capabilities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "methods": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Methods",
+      "type": "array"
+    },
+    "requirements": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Requirements",
+      "type": "array"
+    },
+    "limitations": {
+      "title": "Limitations",
+      "type": "string"
+    },
+    "documentation_url": {
+      "title": "Documentation Url",
+      "type": "string"
+    },
+    "rate_interval": {
+      "default": 1.0,
+      "minimum": 0.2,
+      "title": "Rate Interval",
+      "type": "number"
+    },
+    "plugin": {
+      "default": false,
+      "title": "Plugin",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "name",
+    "platform",
+    "domains",
+    "status",
+    "limitations",
+    "documentation_url"
+  ],
+  "title": "Manifest",
+  "type": "object"
+}

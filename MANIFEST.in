@@ -1,0 +1,13 @@
+include LICENSE README.md requirements.lock requirements-dev.lock Dockerfile compose.yaml .env.example
+recursive-include backend/socialintel/web *
+recursive-include docs *.md *.json *.png
+recursive-include frontend *.json *.ts *.tsx *.css *.html
+prune frontend/node_modules
+prune frontend/dist
+recursive-include scripts *.py *.mjs
+recursive-include plugins *.py *.toml *.md
+recursive-include tests *.py
+recursive-exclude * __pycache__ *.pyc
+
+prune plugins/example_provider/build
+prune plugins/example_provider/src/socialintel_example_provider.egg-info

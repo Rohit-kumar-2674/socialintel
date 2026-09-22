@@ -1,0 +1,29 @@
+name: socialintel
+services:
+  socialintel:
+    build: .
+    image: socialintel:local
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - .env
+    environment:
+      SOCIALINTEL_DATA_DIR: /data
+      SOCIALINTEL_API_TOKEN: ${SOCIALINTEL_API_TOKEN:?Run python scripts/configure_docker.py first}
+      SOCIALINTEL_ALLOWED_HOSTS: 127.0.0.1,localhost
+    volumes:
+      - socialintel-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 512m
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+volumes:
+  socialintel-data:

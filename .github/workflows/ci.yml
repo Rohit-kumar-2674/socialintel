@@ -1,0 +1,84 @@
+name: Verify SocialIntel
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -r requirements-dev.lock
+      - run: python -m pip install --no-deps -e .
+      - run: python -m ruff check backend tests scripts plugins
+      - run: python -m pytest -q
+  dashboard-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: python -m pip install -r requirements-dev.lock
+      - run: python -m pip install --no-deps -e .
+      - run: npm ci --prefix frontend
+      - run: npm run build --prefix frontend
+      - run: python scripts/build_frontend.py
+      - run: python -m build
+      - run: python -m pip install --no-deps plugins/example_provider
+      - name: Verify installed plugin
+        env:
+          SOCIALINTEL_PLUGINS: socialintel_example:create_provider
+        run: python -c "from socialintel.config import Settings; from socialintel.providers import Registry; r=Registry(Settings()); assert not r.plugin_errors; assert r.get('example-page').manifest.plugin"
+      - name: Verify wheel includes dashboard
+        run: python -c "import glob,zipfile; z=zipfile.ZipFile(glob.glob('dist/*.whl')[0]); assert 'socialintel/web/index.html' in z.namelist(); assert any(n.endswith('.js') for n in z.namelist())"
+      - run: cd frontend && npx playwright install --with-deps chromium
+      - name: Synthetic dashboard browser checks
+        env:
+          SOCIALINTEL_TEST_TOKEN: synthetic-ci-token-not-a-real-credential-00000
+        run: |
+          python tests/serve_dashboard.py > /tmp/socialintel-ui.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8124/ >/dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/dashboard_smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dashboard-and-distributions
+          path: |
+            .qa/dashboard/
+            dist/
+          include-hidden-files: true
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/configure_docker.py
+      - run: docker compose config --quiet
+      - run: docker compose up --build --wait --wait-timeout 180 -d
+      - name: Verify dashboard and authentication boundary
+        run: |
+          curl -fsS http://127.0.0.1:8000/ | grep -q SocialIntel
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/cases)" = 401
+          docker compose exec -T socialintel python /app/healthcheck.py
+          test "$(docker compose exec -T socialintel id -u)" = 10001
+      - if: always()
+        run: docker compose down
